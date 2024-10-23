@@ -10,4 +10,5 @@ require (
 require (
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 )
