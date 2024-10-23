@@ -1,4 +1,4 @@
-package internal
+package plugins
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 	"github.com/schneider001/sf-apis/go/sfgo"
 )
 
-func Handle(records <-chan *sfgo.SysFlow) {
+func Printer(records <-chan *sfgo.SysFlow) {
 	for {
 		rec, ok := <-records
 		if !ok {
