@@ -20,6 +20,11 @@ func main() {
 		log.Fatal("SF_SOCKET_PATH must be set")
 	}
 
+	producer, err := plugins.MakeKafkaProducer("sf_events")
+	if err != nil {
+		log.Fatal("Make producer", err.Error())
+	}
+
 	agg := &plugins.AggregatorPlugin{}
 
 	var wg sync.WaitGroup
@@ -27,7 +32,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		plugins.Printer(events)
+		producer.Handle(events)
 	}()
 
 	wg.Add(1)
