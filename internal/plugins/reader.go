@@ -105,8 +105,6 @@ func Reader(socketPath string, records chan<- *sfgo.SysFlow) {
 			log.Fatal("Accept error: ", err)
 		}
 
-		//checkSocketBuffer(conn)
-
 		for {
 			sFlow = sfgo.NewSysFlow()
 			_, _, _, _, err := conn.ReadMsgUnix(buf[:], oobuf[:])
@@ -127,6 +125,8 @@ func Reader(socketPath string, records chan<- *sfgo.SysFlow) {
 			}
 
 			records <- sFlow
+
+			//checkSocketBuffer(conn)
 		}
 
 		conn.Close()

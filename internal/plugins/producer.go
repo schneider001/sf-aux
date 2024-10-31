@@ -2,7 +2,9 @@ package plugins
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/pkg/errors"
@@ -12,8 +14,10 @@ import (
 )
 
 type KafkaProducerPlugin struct {
-	topic    string
-	producer sarama.SyncProducer
+	main_topic        string
+	keepalive_topic   string
+	producer          sarama.SyncProducer
+	lastSentTimestamp time.Time
 }
 
 func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
@@ -32,8 +36,10 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 
 	log.Println("kafka KafkaProducerPlugin")
 	alerter := &KafkaProducerPlugin{
-		topic:    producerConfig.Topic,
-		producer: producer,
+		main_topic:        producerConfig.MainTopic,
+		keepalive_topic:   producerConfig.KeepAliveTopic,
+		producer:          producer,
+		lastSentTimestamp: time.Time{},
 	}
 
 	return alerter, nil
@@ -58,12 +64,9 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 
 		_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
 			Headers: []sarama.RecordHeader{
-				{Key: []byte("filename"), Value: []byte(ev.Header.Filename)},
 				{Key: []byte("exporter"), Value: []byte(ev.Header.Exporter)},
-				{Key: []byte("version"), Value: version},
-				{Key: []byte("ip"), Value: []byte(ev.Header.Ip)},
 			},
-			Topic: p.topic,
+			Topic: p.main_topic,
 			Value: sarama.ByteEncoder(message),
 		})
 		if err != nil {
@@ -71,5 +74,35 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 			continue
 		}
 
+		now := time.Now()
+		if now.Sub(p.lastSentTimestamp) > time.Hour {
+			err = p.sendKeepAlive(ev.Header.Exporter)
+			if err != nil {
+				log.Println("Error sending keep-alive message:", err)
+			}
+			p.lastSentTimestamp = now
+		}
 	}
+}
+
+func (p *KafkaProducerPlugin) sendKeepAlive(exporter string) error {
+	isoTimestamp := time.Now().Format(time.RFC3339)
+
+	keepAliveData := map[string]string{
+		"exporter":  exporter,
+		"timestamp": isoTimestamp,
+	}
+
+	message, err := json.Marshal(keepAliveData)
+	if err != nil {
+		return errors.Wrap(err, "marshal keep-alive data")
+	}
+
+	keepAliveMessage := &sarama.ProducerMessage{
+		Topic: p.keepalive_topic,
+		Value: sarama.ByteEncoder(message),
+	}
+
+	_, _, err = p.producer.SendMessage(keepAliveMessage)
+	return err
 }

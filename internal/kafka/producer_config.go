@@ -6,8 +6,9 @@ import (
 )
 
 type KafkaProducerConfig struct {
-	Addresses []string `required:"true"`
-	Topic     string   `required:"true"`
+	Addresses      []string `required:"true"`
+	MainTopic      string   `required:"true"`
+	KeepAliveTopic string   `required:"true"`
 }
 
 func NewProducerConfig(envPrefix string) (*KafkaProducerConfig, error) {
