@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"log"
 	"time"
@@ -35,6 +34,7 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	}
 
 	log.Println("kafka KafkaProducerPlugin")
+
 	alerter := &KafkaProducerPlugin{
 		main_topic:        producerConfig.MainTopic,
 		keepalive_topic:   producerConfig.KeepAliveTopic,
@@ -53,21 +53,25 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 			return nil
 		}
 
-		version := make([]byte, 8)
-		binary.LittleEndian.PutUint64(version, uint64(ev.Header.Version))
-
 		message, err := ev.MarshalData()
 		if err != nil {
 			log.Println("Marshal error", err)
 			continue
 		}
 
+		// Test durability
+		/*
+			if err := appendToFile("producer_msgs", message); err != nil {
+				log.Println("Error writing to file:", err)
+			}
+		*/
 		_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
 			Headers: []sarama.RecordHeader{
 				{Key: []byte("exporter"), Value: []byte(ev.Header.Exporter)},
 			},
 			Topic: p.main_topic,
 			Value: sarama.ByteEncoder(message),
+			Key:   sarama.ByteEncoder(ev.Header.Exporter),
 		})
 		if err != nil {
 			log.Println("Send error: ", err)
@@ -85,6 +89,19 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 	}
 }
 
+//Function to test durability
+/*
+func appendToFile(filename string, message []byte) error {
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return errors.Wrap(err, "opening file for appending")
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%s\n", message))
+	return err
+}
+*/
 func (p *KafkaProducerPlugin) sendKeepAlive(exporter string) error {
 	isoTimestamp := time.Now().Format(time.RFC3339)
 
