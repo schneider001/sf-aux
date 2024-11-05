@@ -1,8 +1,11 @@
 package plugins
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -22,6 +25,35 @@ type KafkaProducerPlugin struct {
 func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+
+	if os.Getenv("KAFKA_NET_SASL_ENABLE") == "true" {
+		config.Net.SASL.Enable = true
+		config.Net.SASL.User = os.Getenv("KAFKA_NET_SASL_USER")
+		config.Net.SASL.Password = os.Getenv("KAFKA_NET_SASL_PASSWORD")
+		config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+		config.Net.SASL.Handshake = true
+	}
+
+	if os.Getenv("KAFKA_NET_SECURITY_TLS_ENABLED") == "true" {
+		config.Net.TLS.Enable = true
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: false,
+		}
+
+		caFile := os.Getenv("KAFKA_NET_SECURITY_ROOT_CA_FILE")
+		if caFile != "" {
+			caCert, err := os.ReadFile(caFile)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to read CA file")
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			tlsConfig.RootCAs = caCertPool
+		}
+
+		config.Net.TLS.Config = tlsConfig
+	}
 
 	producerConfig, err := kafka.NewProducerConfig(cfgPrefix)
 	if err != nil {
