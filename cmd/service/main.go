@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -12,6 +13,15 @@ import (
 )
 
 func main() {
+	logFile, err := os.OpenFile("/var/log/sf-aux/sf-aux.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+
+	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(multiWriter)
+
 	records := make(chan *sfgo.SysFlow, 16)
 	events := make(chan models.EventWithContext, 16)
 

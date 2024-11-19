@@ -7,13 +7,14 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+
+	//"strconv"
+	//"strings"
 
 	"github.com/actgardner/gogen-avro/v7/compiler"
 	"github.com/actgardner/gogen-avro/v7/vm"
 	"github.com/schneider001/sf-apis/go/sfgo"
-	"golang.org/x/sys/unix"
+	//"golang.org/x/sys/unix"
 )
 
 const (
@@ -21,49 +22,50 @@ const (
 	OOBuffSize = 1024
 )
 
-func checkSocketBuffer(conn *net.UnixConn) {
-	rmemMax, err := getRmemMax()
-	if err != nil {
-		log.Fatal("Failed to get rmem_max:", err)
+/*
+	func checkSocketBuffer(conn *net.UnixConn) {
+		rmemMax, err := getRmemMax()
+		if err != nil {
+			log.Fatal("Failed to get rmem_max:", err)
+		}
+
+		file, err := conn.File()
+		if err != nil {
+			log.Println("Failed to get file descriptor:", err)
+			return
+		}
+		defer file.Close()
+
+		const FIONREAD = 0x541B
+		availableBytes, err := unix.IoctlGetInt(int(file.Fd()), FIONREAD)
+		if err != nil {
+			log.Println("Failed to get available bytes for reading from socket buffer:", err)
+			return
+		}
+
+		log.Printf("Available bytes for reading from socket buffer: %d\n", availableBytes)
+		log.Printf("rmem_max value: %d\n", rmemMax)
+
+		if availableBytes >= rmemMax/2 {
+			log.Fatalf("Available bytes for reading (%d) reached half of rmem_max (%d). Stopping program.", availableBytes, rmemMax)
+		}
 	}
 
-	file, err := conn.File()
-	if err != nil {
-		log.Println("Failed to get file descriptor:", err)
-		return
+	func getRmemMax() (int, error) {
+		data, err := os.ReadFile("/proc/sys/net/core/rmem_max")
+		if err != nil {
+			return 0, err
+		}
+
+		rmemMaxStr := string(data)
+		rmemMax, err := strconv.Atoi(strings.TrimSpace(rmemMaxStr))
+		if err != nil {
+			return 0, err
+		}
+
+		return rmemMax, nil
 	}
-	defer file.Close()
-
-	const FIONREAD = 0x541B
-	availableBytes, err := unix.IoctlGetInt(int(file.Fd()), FIONREAD)
-	if err != nil {
-		log.Println("Failed to get available bytes for reading from socket buffer:", err)
-		return
-	}
-
-	log.Printf("Available bytes for reading from socket buffer: %d\n", availableBytes)
-	log.Printf("rmem_max value: %d\n", rmemMax)
-
-	if availableBytes >= rmemMax/2 {
-		log.Fatalf("Available bytes for reading (%d) reached half of rmem_max (%d). Stopping program.", availableBytes, rmemMax)
-	}
-}
-
-func getRmemMax() (int, error) {
-	data, err := os.ReadFile("/proc/sys/net/core/rmem_max")
-	if err != nil {
-		return 0, err
-	}
-
-	rmemMaxStr := string(data)
-	rmemMax, err := strconv.Atoi(strings.TrimSpace(rmemMaxStr))
-	if err != nil {
-		return 0, err
-	}
-
-	return rmemMax, nil
-}
-
+*/
 func mustSocket(socketPath string) {
 	if _, err := os.Stat(socketPath); !errors.Is(err, os.ErrNotExist) {
 		log.Println("Socket already exists")

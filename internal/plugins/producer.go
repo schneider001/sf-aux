@@ -27,6 +27,12 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 
+	config.Producer.Retry.Max = 1
+	config.Producer.Retry.Backoff = 5 * time.Second
+	config.Producer.RequiredAcks = -1
+	config.Net.MaxOpenRequests = 1
+	config.Producer.Idempotent = true
+
 	if os.Getenv("KAFKA_NET_SASL_ENABLE") == "true" {
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = os.Getenv("KAFKA_NET_SASL_USER")
