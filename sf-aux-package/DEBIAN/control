@@ -1,0 +1,5 @@
+Package: sf-aux
+Version: 1.0.0
+Maintainer: vaplatov <vaplatov@phystech.edu>
+Architecture: amd64
+Description: Connector for integrating sf-collector with Kafka

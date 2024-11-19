@@ -1,0 +1,14 @@
+[Unit]
+Description=Connector for integrating sf-collector with Kafka
+After=network.target
+
+[Service]
+Type=simple
+User=root
+RuntimeDirectory=sysflow
+EnvironmentFile=-/etc/default/sysflow
+ExecStart=/usr/bin/sf-aux
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

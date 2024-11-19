@@ -28,7 +28,8 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	config.Producer.Return.Errors = true
 
 	config.Producer.Retry.Max = 1
-	config.Producer.Retry.Backoff = 5 * time.Second
+	config.Producer.Retry.Backoff = 3 * time.Second
+	config.Producer.Timeout = 10 * time.Second
 	config.Producer.RequiredAcks = -1
 	config.Net.MaxOpenRequests = 1
 	config.Producer.Idempotent = true
