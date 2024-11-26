@@ -1,0 +1,49 @@
+KAFKA
+//////////////////////////////
+cd ~/kafka/kafka_2.13-3.7.1_home
+export KAFKA_OPTS="-Djava.security.auth.login.config=/home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/jaas.conf"
+bin/zookeeper-server-start.sh config/zookeeper.properties
+bin/kafka-server-start.sh config/server.properties
+bin/kafka-topics.sh --list --bootstrap-server 192.168.0.107:9092 --command-config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+bin/kafka-topics.sh --delete --topic sysflow --bootstrap-server 192.168.0.107:9092 --command-config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+bin/kafka-topics.sh --create --topic sysflow --bootstrap-server 192.168.0.107:9092 --partitions 10 --replication-factor 1 --command-config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+bin/kafka-topics.sh --create --topic sysflow-keepalive --bootstrap-server 192.168.0.107:9092 --partitions 10 --replication-factor 1 --command-config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+bin/kafka-console-consumer.sh --topic sysflow --from-beginning --property print.headers=true --property print.key=true --bootstrap-server 192.168.0.107:9092 --consumer.config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+bin/kafka-console-consumer.sh --topic sysflow --from-beginning --property print.partition=true --property print.key=true --property print.value=false --bootstrap-server 192.168.0.107:9092 --consumer.config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties --timeout-ms 1000 | sort | uniq
+bin/kafka-console-consumer.sh --topic sysflow-keepalive --from-beginning --bootstrap-server 192.168.0.107:9092 --consumer.config /home/valeriy/kafka/kafka_2.13-3.7.1_home/sasl-ssl/config.properties
+
+
+SSL_SASL
+//////////////////////////////
+openssl req -new -x509 -keyout ca-key -out ca-cert -days 365 -config san.cnf
+keytool -keystore kafka.server.keystore.jks -alias localhost -validity 365 -genkey -keyalg RSA -ext SAN=IP:192.168.0.107
+keytool -keystore kafka.server.truststore.jks -alias CARoot -import -file ca-cert
+keytool -keystore kafka.client.truststore.jks -alias CARoot -import -file ca-cert
+keytool -keystore kafka.server.keystore.jks -alias localhost -certreq -file cert-file
+openssl x509 -req -CA ca-cert -CAkey ca-key -in cert-file -out cert-signed -days 365 -CAcreateserial -extfile broker-san.cnf -extensions v3_req
+keytool -keystore kafka.server.keystore.jks -alias CARoot -import -file ca-cert
+keytool -keystore kafka.server.keystore.jks -alias localhost -import -file cert-signed
+keytool -list -keystore kafka.server.keystore.jks
+#https://github.com/camelya58/kafka-sasl-ssl
+#https://stackoverflow.com/questions/61482914/apache-kafka-consumer-java-security-cert-certificateexception-no-subject-altern
+
+
+BUILD
+//////////////////////////////
+go build -o sf-aux-package/usr/bin/sf-aux cmd/service/main.go
+sudo chmod 755 sf-aux-package/usr/bin/sf-aux
+sudo chmod 644 sf-aux-package/usr/lib/systemd/system/sf-aux.service
+
+
+INSTALL
+//////////////////////////////
+dpkg-deb --build sf-aux-package
+sudo dpkg -i sf-aux-package.deb
+sudo mkdir -p /var/log/sf-aux/
+sudo nano /etc/default/sysflow
+
+
+SF-COLLECTOR
+//////////////////////////////
+sudo SF_SOCKET_PATH=/sock/sysflow.sock SF_EVENTS_MAINTOPIC=test SF_EVENTS_KEEPALIVETOPIC=keepalive SF_EVENTS_ADDRESSES="localhost:9092" KAFKA_NET_SASL_ENABLE="true" KAFKA_NET_SASL_USER="client" KAFKA_NET_SASL_PASSWORD="" KAFKA_NET_SECURITY_TLS_ENABLED="true" KAFKA_NET_SECURITY_ROOT_CA_FILE="/home/valeriy/kafka/ca-cert" go run cmd/service/main.go
+sudo ./sysporter -s 1 -k ebpf-core -u /sock/sysflow.sock -e sip-asd.msk.avito.ru

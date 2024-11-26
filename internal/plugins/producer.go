@@ -26,13 +26,11 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-
 	config.Producer.Retry.Max = 1
-	config.Producer.Retry.Backoff = 3 * time.Second
 	config.Producer.Timeout = 10 * time.Second
 	config.Producer.RequiredAcks = -1
-	config.Net.MaxOpenRequests = 1
 	config.Producer.Idempotent = true
+	config.Net.MaxOpenRequests = 1
 
 	if os.Getenv("KAFKA_NET_SASL_ENABLE") == "true" {
 		config.Net.SASL.Enable = true
@@ -72,7 +70,7 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 		return nil, errors.Wrap(err, "creating producer")
 	}
 
-	log.Println("kafka KafkaProducerPlugin")
+	log.Println("KafkaProducerPlugin start")
 
 	alerter := &KafkaProducerPlugin{
 		main_topic:        producerConfig.MainTopic,
@@ -98,12 +96,6 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 			continue
 		}
 
-		// Test durability
-		/*
-			if err := appendToFile("producer_msgs", message); err != nil {
-				log.Println("Error writing to file:", err)
-			}
-		*/
 		_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
 			Headers: []sarama.RecordHeader{
 				{Key: []byte("exporter"), Value: []byte(ev.Header.Exporter)},
@@ -118,7 +110,7 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 		}
 
 		now := time.Now()
-		if now.Sub(p.lastSentTimestamp) > time.Hour {
+		if now.Sub(p.lastSentTimestamp) > time.Minute {
 			err = p.sendKeepAlive(ev.Header.Exporter)
 			if err != nil {
 				log.Println("Error sending keep-alive message:", err)
@@ -128,19 +120,6 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 	}
 }
 
-//Function to test durability
-/*
-func appendToFile(filename string, message []byte) error {
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return errors.Wrap(err, "opening file for appending")
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(fmt.Sprintf("%s\n", message))
-	return err
-}
-*/
 func (p *KafkaProducerPlugin) sendKeepAlive(exporter string) error {
 	isoTimestamp := time.Now().Format(time.RFC3339)
 
