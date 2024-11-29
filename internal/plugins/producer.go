@@ -24,6 +24,7 @@ type KafkaProducerPlugin struct {
 
 func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 	config := sarama.NewConfig()
+
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 	config.Producer.Retry.Max = 1
