@@ -44,7 +44,7 @@ sudo nano /etc/default/sysflow
 
 SF-COLLECTOR
 //////////////////////////////
-sudo SF_SOCKET_PATH=/sock/sysflow.sock SF_EVENTS_MAINTOPIC=test SF_EVENTS_KEEPALIVETOPIC=keepalive SF_EVENTS_ADDRESSES="localhost:9092" KAFKA_NET_SASL_ENABLE="true" KAFKA_NET_SASL_USER="client" KAFKA_NET_SASL_PASSWORD="" KAFKA_NET_SECURITY_TLS_ENABLED="true" KAFKA_NET_SECURITY_ROOT_CA_FILE="/home/valeriy/kafka/ca-cert" go run cmd/service/main.go
+sudo SF_SOCKET_PATH=/sock/sysflow.sock SF_EVENTS_MAINTOPIC=sysflow SF_EVENTS_KEEPALIVETOPIC=sysflow-keepalive SF_EVENTS_ADDRESSES="172.20.10.3:9092" KAFKA_NET_SASL_ENABLE="true" KAFKA_NET_SASL_USER="client" KAFKA_NET_SASL_PASSWORD="password" KAFKA_NET_SECURITY_TLS_ENABLED="true" KAFKA_NET_SECURITY_ROOT_CA_FILE="/sysflow/certs/ca-cert" sf-aux-package/usr/bin/sf-aux
 sudo /sysflow/sf-collector/sysporter -s 1 -k ebpf-core -u /sock/sysflow.sock -e sip-asd01.msk.avito.ru
 
 

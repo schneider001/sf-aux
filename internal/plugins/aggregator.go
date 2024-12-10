@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"context"
 	"errors"
 	"log"
 
@@ -53,7 +52,7 @@ func (a *AggregatorPlugin) Handle(in <-chan *sfgo.SysFlow, out chan<- models.Eve
 		default:
 			typ, err := stringifyType(rec.Rec.UnionType)
 			if err != nil {
-				log.Println(context.Background(), err)
+				log.Printf("Error determining record type: %v", err)
 				continue
 			}
 

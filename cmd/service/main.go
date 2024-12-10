@@ -32,7 +32,7 @@ func main() {
 
 	producer, err := plugins.MakeKafkaProducer("sf_events")
 	if err != nil {
-		log.Fatal("Make producer", err.Error())
+		log.Fatal("Make producer: ", err.Error())
 	}
 
 	agg := &plugins.AggregatorPlugin{}
