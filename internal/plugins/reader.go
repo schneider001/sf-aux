@@ -3,10 +3,12 @@ package plugins
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/actgardner/gogen-avro/v7/compiler"
 	"github.com/actgardner/gogen-avro/v7/vm"
@@ -36,6 +38,12 @@ func mustSocket(socketPath string) {
 func Reader(socketPath string, records chan<- *sfgo.SysFlow) {
 	mustSocket(socketPath)
 
+	timeFile, err := os.OpenFile("/sysflow/sf-aux/check_perf/time_reader", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatal("Open time file: ", err)
+	}
+	defer timeFile.Close()
+
 	l, err := net.ListenUnix("unixpacket", &net.UnixAddr{Name: socketPath, Net: "unix"})
 	if err != nil {
 		log.Fatal("Listen error: ", err)
@@ -60,6 +68,8 @@ func Reader(socketPath string, records chan<- *sfgo.SysFlow) {
 		}
 
 		for {
+			start := time.Now()
+
 			sFlow = sfgo.NewSysFlow()
 			_, _, _, _, err := conn.ReadMsgUnix(buf[:], oobuf[:])
 			if err != nil {
@@ -79,6 +89,9 @@ func Reader(socketPath string, records chan<- *sfgo.SysFlow) {
 			}
 
 			records <- sFlow
+
+			duration := time.Since(start).Microseconds()
+			_, _ = fmt.Fprintf(timeFile, "%d\n", duration)
 		}
 
 		conn.Close()

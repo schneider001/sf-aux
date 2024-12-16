@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -84,7 +85,15 @@ func MakeKafkaProducer(cfgPrefix string) (*KafkaProducerPlugin, error) {
 }
 
 func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) error {
+	timeFile, err := os.OpenFile("/sysflow/sf-aux/check_perf/time_producer", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatal("Open time file: ", err)
+	}
+	defer timeFile.Close()
+
 	for {
+		start := time.Now()
+
 		ev, ok := <-events
 		if !ok {
 			log.Println("Channel 'records' closed")
@@ -118,6 +127,9 @@ func (p *KafkaProducerPlugin) Handle(events <-chan models.EventWithContext) erro
 			}
 			p.lastSentTimestamp = now
 		}
+
+		duration := time.Since(start).Microseconds()
+		_, _ = fmt.Fprintf(timeFile, "%d\n", duration)
 	}
 }
 

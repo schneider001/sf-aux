@@ -2,7 +2,10 @@ package plugins
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/schneider001/sf-apis/go/sfgo"
 
@@ -39,7 +42,15 @@ func stringifyType(t sfgo.RecUnionTypeEnum) (string, error) {
 }
 
 func (a *AggregatorPlugin) Handle(in <-chan *sfgo.SysFlow, out chan<- models.EventWithContext) {
+	timeFile, err := os.OpenFile("/sysflow/sf-aux/check_perf/time_aggregator", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatal("Open time file: ", err)
+	}
+	defer timeFile.Close()
+
 	for {
+		start := time.Now()
+
 		rec, ok := <-in
 		if !ok {
 			log.Println("Channel 'in' closed")
@@ -62,5 +73,8 @@ func (a *AggregatorPlugin) Handle(in <-chan *sfgo.SysFlow, out chan<- models.Eve
 				Data:   *rec.Rec,
 			}
 		}
+
+		duration := time.Since(start).Microseconds()
+		_, _ = fmt.Fprintf(timeFile, "%d\n", duration)
 	}
 }
