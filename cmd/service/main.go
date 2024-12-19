@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -15,6 +18,9 @@ import (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.SetBlockProfileRate(1)
+
 	logFile, err := os.OpenFile("/var/log/sf-aux/sf-aux.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatal(err)
@@ -24,8 +30,15 @@ func main() {
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(multiWriter)
 
-	records := make(chan *sfgo.SysFlow, 16)
-	events := make(chan models.EventWithContext, 16)
+	go func() {
+		log.Println("Starting pprof server on :6060")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			log.Printf("pprof server error: %v", err)
+		}
+	}()
+
+	records := make(chan *sfgo.SysFlow, 16000)
+	events := make(chan models.EventWithContext, 16000)
 
 	socketPath, ok := os.LookupEnv("SF_SOCKET_PATH")
 	if !ok {
